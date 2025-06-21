@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
 
 # 페이지 설정
 st.set_page_config(page_title="보장 리모델링 Before & After 비교", layout="wide")
@@ -87,13 +85,6 @@ if selected_items:
         st.warning(f"⚠️ 월 보험료가 총 {abs(diff):,.0f}원 증가했습니다. (증가율: {abs(rate):.1f}%)")
     else:
         st.info("📌 월 보험료는 변동이 없습니다.")
-
-    # Heatmap 시각화
-    st.subheader("📊 보장금액 변화 Heatmap")
-    pivot = edited_df.set_index("보장명")[["보장금액_기존", "보장금액_리모델링"]]
-    fig, ax = plt.subplots(figsize=(10, len(pivot) * 0.5))
-    sns.heatmap(pivot, annot=True, fmt=".0f", cmap="YlGnBu", linewidths=0.5, ax=ax)
-    st.pyplot(fig)
 
     # 추천 멘트
     st.subheader("📝 추천 멘트")
