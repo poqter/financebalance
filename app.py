@@ -68,31 +68,56 @@ if selected_items:
     st.divider()
     st.subheader("📌 보장 변화 요약")
     edited_df["상태"] = edited_df.apply(
-        lambda row: "강화" if row["보장금액_리모델링"] > row["보장금액_기존"] else
-                    "축소" if row["보장금액_리모델링"] < row["보장금액_기존"] else "유지",
+        lambda row: "🟢 강화" if row["보장금액_리모델링"] > row["보장금액_기존"] else
+                    "🔴 축소" if row["보장금액_리모델링"] < row["보장금액_기존"] else "⚪ 유지",
         axis=1
     )
-    st.dataframe(edited_df, use_container_width=True)
 
-    st.markdown(f"**총 월 보험료 (기존): {total_before:,.0f} 원**")
-    st.markdown(f"**총 월 보험료 (리모델링): {total_after:,.0f} 원**")
+    # 상태 강조 테이블
+    st.markdown("### 📋 항목별 변화 상태")
+    styled_df = edited_df.style.applymap(
+        lambda v: "background-color: #d1e7dd" if v == "🟢 강화" else
+                  "background-color: #f8d7da" if v == "🔴 축소" else
+                  "background-color: #fefefe", subset=["상태"]
+    )
+    st.dataframe(styled_df, use_container_width=True, hide_index=True)
 
+    # 카드 형식 보험료 비교
+    st.markdown("### 💳 월 보험료 카드 비교")
+    card_col1, card_col2 = st.columns(2)
+    with card_col1:
+        st.markdown(f"""
+        <div style='padding:20px; background-color:#f8f9fa; border-left:5px solid #adb5bd; border-radius:10px'>
+        <h4>기존 월 보험료</h4>
+        <h2 style='color:#212529'>{total_before:,.0f}원</h2>
+        </div>
+        """, unsafe_allow_html=True)
+    with card_col2:
+        st.markdown(f"""
+        <div style='padding:20px; background-color:#e7f5ff; border-left:5px solid #339af0; border-radius:10px'>
+        <h4>리모델링 후 월 보험료</h4>
+        <h2 style='color:#1c7ed6'>{total_after:,.0f}원</h2>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # 절감 효과 강조
     diff = total_before - total_after
     rate = (diff / total_before * 100) if total_before else 0
+    st.markdown("### 📉 절감 효과")
     if diff > 0:
-        st.success(f"💡 월 보험료가 총 {diff:,.0f}원 절감되었습니다. (절감율: {rate:.1f}%)")
+        st.success(f"💸 월 보험료가 총 **{diff:,.0f}원 절감**되었습니다. (절감율: **{rate:.1f}%**) ✅")
     elif diff < 0:
-        st.warning(f"⚠️ 월 보험료가 총 {abs(diff):,.0f}원 증가했습니다. (증가율: {abs(rate):.1f}%)")
+        st.warning(f"📈 월 보험료가 총 **{abs(diff):,.0f}원 증가**했습니다. (증가율: **{abs(rate):.1f}%**) ⚠️")
     else:
         st.info("📌 월 보험료는 변동이 없습니다.")
 
     # 추천 멘트
-    st.subheader("📝 추천 멘트")
+    st.markdown("### 📝 리모델링 핵심 요약")
     if diff > 0 and rate >= 15:
         st.markdown("👍 보험료를 효과적으로 절감하면서 주요 보장 항목은 유지 또는 강화되었습니다.")
     elif diff > 0:
         st.markdown("👍 보험료가 절감되었고, 대부분의 보장이 유지되었습니다.")
-    elif diff < 0 and (edited_df["상태"] == "강화").sum() > (edited_df["상태"] == "축소").sum():
+    elif diff < 0 and (edited_df["상태"] == "🟢 강화").sum() > (edited_df["상태"] == "🔴 축소").sum():
         st.markdown("✅ 일부 보험료가 증가했지만, 보장 수준이 전반적으로 강화되었습니다.")
     else:
         st.markdown("📌 리모델링으로 일부 보장이 조정되었으며 보험료도 함께 변경되었습니다.")
