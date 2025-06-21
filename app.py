@@ -1,12 +1,11 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 
-# 📄 페이지 설정
+# 페이지 설정
 st.set_page_config(page_title="보장 리모델링 Before & After 비교", layout="wide")
 st.title("🔄 보장 리모델링 Before & After 비교")
 
-# 📌 보장 항목 목록
+# 보장 항목 리스트
 guarantee_items = [
     "일반사망", "질병사망", "재해(상해)사망", "질병후유장해", "재해(상해)장해",
     "일반암", "유사암", "뇌혈관", "뇌졸중", "뇌출혈", "허혈성심장질환", "급성심근경색증",
@@ -19,7 +18,7 @@ guarantee_items = [
     "질병입원(실손)", "질병통원(실손)", "상해입원(실손)", "상해통원(실손)"
 ]
 
-# 🔍 카테고리 자동 분류 함수
+# 자동 카테고리 분류 함수
 def classify_category(name):
     if "암" in name:
         return "암"
@@ -44,83 +43,29 @@ def classify_category(name):
     else:
         return "기타"
 
-# 🧭 사이드바에서 보장 항목 선택
-st.sidebar.header("보장 항목 선택")
-selected_items = st.sidebar.multiselect("비교할 보장 항목을 선택하세요", guarantee_items)
+# 사이드바 항목 선택
+st.sidebar.header("📋 보장 항목 선택")
+selected_items = st.sidebar.multiselect("비교할 항목을 선택하세요", guarantee_items)
 
-# ✍️ 선택 항목 입력
 if selected_items:
-    st.subheader("✅ 기존 설계 vs 리모델링 설계 입력")
-    input_data = []
-    for item in selected_items:
-        with st.expander(f"📌 {item}"):
-            col1, col2 = st.columns(2)
-            with col1:
-                before_amt = st.number_input(f"[기존] 보장금액 - {item}", min_value=0, step=10000, key=f"b_amt_{item}")
-                before_prem = st.number_input(f"[기존] 월 보험료 - {item}", min_value=0, step=1000, key=f"b_prem_{item}")
-            with col2:
-                after_amt = st.number_input(f"[리모델링] 보장금액 - {item}", min_value=0, step=10000, key=f"a_amt_{item}")
-                after_prem = st.number_input(f"[리모델링] 월 보험료 - {item}", min_value=0, step=1000, key=f"a_prem_{item}")
-            input_data.append({
-                "보장명": item,
-                "보장금액_기존": before_amt,
-                "월보험료_기존": before_prem,
-                "보장금액_리모델링": after_amt,
-                "월보험료_리모델링": after_prem,
-                "카테고리": classify_category(item)
-            })
+    st.subheader("💡 선택한 항목에 대한 보장금액 입력")
 
-    df = pd.DataFrame(input_data)
+    df_input = pd.DataFrame({"보장명": selected_items})
+    df_input["보장금액_기존"] = ""
+    df_input["보장금액_리모델링"] = ""
+    df_input["카테고리"] = df_input["보장명"].apply(classify_category)
 
-    if not df.empty:
-        total_before = df["월보험료_기존"].sum()
-        total_after = df["월보험료_리모델링"].sum()
-        savings = total_before - total_after
-        savings_rate = (savings / total_before) * 100 if total_before else 0
+    edited_df = st.data_editor(df_input, num_rows="dynamic", use_container_width=True)
 
-        if savings > 0 and savings_rate >= 20:
-            reco_text = "👍 월 보험료를 크게 절감하면서도 보장을 유지했어요!"
-        elif savings > 0:
-            reco_text = "👍 보장은 유지하면서도 월 보험료를 줄였습니다!"
-        elif savings < 0 and df["보장금액_리모델링"].sum() > df["보장금액_기존"].sum():
-            reco_text = "👍 보험료는 소폭 상승했지만 보장이 더 강해졌어요!"
-        else:
-            reco_text = "📌 리모델링으로 보장이 일부 조정되었어요. 자세한 설명을 참고하세요."
+    st.subheader("💳 월 보험료 입력")
+    col1, col2 = st.columns(2)
+    with col1:
+        total_before = st.text_input("총 월 보험료 (기존)")
+    with col2:
+        total_after = st.text_input("총 월 보험료 (리모델링)")
 
-        # 💳 감성 카드 UI
-        st.markdown("### 💳 감성 카드 요약 비교")
-        col_card1, col_card2 = st.columns(2)
-        with col_card1:
-            st.markdown(f"""
-            <div style="background-color:#f8f9fa; padding:20px; border-radius:15px; border-left: 10px solid #adb5bd">
-            <h3 style="color:#495057;">✅ 기존 설계</h3>
-            <p>총 월 보험료: <strong style="font-size:22px;">{total_before:,.0f}원</strong></p>
-            <p>보장 항목 수: {len(df)}</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with col_card2:
-            st.markdown(f"""
-            <div style="background-color:#e6f7ff; padding:20px; border-radius:15px; border-left: 10px solid #339af0">
-            <h3 style="color:#1c7ed6;">🛠️ 리모델링 설계</h3>
-            <p>총 월 보험료: <strong style="font-size:22px;">{total_after:,.0f}원</strong></p>
-            <p>절감액: <strong style="color:#d9480f;">{savings:,.0f}원</strong></p>
-            <p>절감율: <strong style="color:#fa5252;">{savings_rate:.1f}%</strong></p>
-            <p style="margin-top:10px; font-size:18px;">{reco_text}</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-        # 📊 카테고리별 보장금액 비교
-        st.markdown("### 🔥 카테고리별 보장금액 비교")
-        cat_sum = df.groupby("카테고리")[["보장금액_기존", "보장금액_리모델링"]].sum().reset_index()
-
-        fig, ax = plt.subplots(figsize=(8, 4))
-        x = range(len(cat_sum))
-        width = 0.4
-        ax.bar([i - width/2 for i in x], cat_sum["보장금액_기존"], width=width, label="기존", color="#adb5bd")
-        ax.bar([i + width/2 for i in x], cat_sum["보장금액_리모델링"], width=width, label="리모델링", color="#339af0")
-        ax.set_xticks(list(x))
-        ax.set_xticklabels(cat_sum["카테고리"])
-        ax.set_ylabel("보장금액 (원)")
-        ax.legend()
-        st.pyplot(fig)
+    st.divider()
+    st.subheader("📌 입력 요약")
+    st.write(edited_df)
+    st.write(f"총 월 보험료 (기존): {total_before} 원")
+    st.write(f"총 월 보험료 (리모델링): {total_after} 원")
